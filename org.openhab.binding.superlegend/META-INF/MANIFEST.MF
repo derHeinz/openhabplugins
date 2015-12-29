@@ -1,0 +1,29 @@
+Manifest-Version: 1.0
+Private-Package: org.openhab.binding.superlegend.internal
+Bundle-License: http://www.eclipse.org/legal/epl-v10.html
+Bundle-Name: openHAB Superlegend Binding
+Bundle-SymbolicName: org.openhab.binding.superlegend
+Bundle-Vendor: openHAB.org
+Bundle-Version: 1.7.1.qualifier
+Bundle-Activator: org.openhab.binding.superlegend.internal.SuperlegendActivator
+Bundle-ManifestVersion: 2
+Bundle-Description: This is the Superlegend binding of the open HAB
+ omation Bus (openHAB)
+Import-Package: org.apache.commons.lang,
+ org.openhab.core.binding,
+ org.openhab.core.events,
+ org.openhab.core.items,
+ org.openhab.core.library.items,
+ org.openhab.core.library.types,
+ org.openhab.core.types,
+ org.openhab.model.item.binding,
+ org.osgi.framework,
+ org.osgi.service.cm,
+ org.osgi.service.component,
+ org.osgi.service.event,
+ org.slf4j
+Export-Package: org.openhab.binding.superlegend
+Bundle-DocURL: http://www.openhab.org
+Bundle-RequiredExecutionEnvironment: J2SE-1.5
+Service-Component: OSGI-INF/binding.xml, OSGI-INF/genericbindingprovider.xml
+Bundle-ClassPath: .

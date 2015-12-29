@@ -1,0 +1,5 @@
+Configure your device in the items files.
+
+You should configure the mac address of the device within the binding section of your items file. MAC address is written in hex and without any delimiters in between. 
+Example:
+Color SuperlegendLamp	{superlegend="01234567ABCD"}
