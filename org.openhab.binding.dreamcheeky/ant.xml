@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="Dreamcheeky">
+
+	<property name="org-lib-name" value="hidapi-1.1.jar" />
+	<property name="rp-lib-name" value="hidapi-1.1_raspi.jar" />
+	<property name="x86-lib-name" value="hidapi-1.1_x86.jar" />
+
+	<target name="raspberry-pi">
+		<!-- alternative -> change -->
+		<rename dest="./lib/${x86-lib-name}" src="./lib/${org-lib-name}" replace="false"/>
+		<rename dest="./lib/${org-lib-name}" src="./lib/${rp-lib-name}" replace="false" />
+	</target>
+
+	<target name="x86">
+		<rename dest="./lib/${rp-lib-name}" src="./lib/${org-lib-name}" replace="false" />
+		<rename dest="./lib/${org-lib-name}" src="./lib/${x86-lib-name}" replace="false" />
+	</target>
+
+</project>

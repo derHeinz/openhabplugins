@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Tests for the Dreamcheeky binding
+Bundle-SymbolicName: org.openhab.binding.dreamcheeky.test
+Bundle-Version: 1.7.1.qualifier
+Bundle-Vendor: openHAB.org
+Fragment-Host: org.openhab.binding.dreamcheeky
+Bundle-RequiredExecutionEnvironment: J2SE-1.5
+Require-Bundle: org.junit;bundle-version="4.8.1"
