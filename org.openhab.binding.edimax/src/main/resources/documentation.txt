@@ -1,0 +1,32 @@
+First configure following in openhab.cfg
+
+1. This binding features some discoverers.
+
+1.1. The UDPDiscoverer sends UDP broadcast messages which Edimax will respond to. This discoverer is used by default.
+
+1.2. If for some reasons you cannot use the UDPDiscoverer there is another discovery method that scans an IP segment for the devices.
+In order to use this discoverer you therefore use the 'ipprefix' to configure the first part of the net.
+Next you specify 'ipStartSegment' and 'ipEndSegment' both as numbers. These 3 configurations make
+up an IP range in which the discovery checks for devices.
+
+Example section of openhab.cfg:
+################################ Edimax Binding #######################################
+#
+# Edimax binding
+edimax:ipprefix=192.168.2.
+edimax:ipStartSegment=100
+edimax:ipEndSegment=120
+
+
+2. Next you configure your device itself.
+Simple version is to just configure the mac adress. The item is considered to be a switch, which
+than is ON or OFF.
+Example: Switch EdimaxSimple  {edimax="01234567ABCD"}
+
+There is also the option to configure the type, available types are STATE,POWER and CURRENT.
+Where STATE is the default behaviour, POWER for example assumes a number item and will assign
+the power consumption to this item.
+Example: Number EdimaxCurrent  {edimax="01234567ABCD:CURRENT"}
+Number EdimaxCurrent  {edimax="01234567ABCD:CURRENT"}
+
+3. TODO it uses the default connection credentials.
