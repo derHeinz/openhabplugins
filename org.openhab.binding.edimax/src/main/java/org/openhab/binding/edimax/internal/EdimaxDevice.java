@@ -2,7 +2,7 @@ package org.openhab.binding.edimax.internal;
 
 public class EdimaxDevice {
 	public String ip;
-	public String mac;
+	public String mac; // only store UPPERCASE mac in here.
 
 	public EdimaxDevice() {
 	}
