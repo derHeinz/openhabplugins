@@ -41,7 +41,7 @@ public class SuperlegendCommandSender {
 	 * @param aColor
 	 * @return
 	 */
-	private static byte[] colorPaket(Color aColor) {
+	private byte[] colorPaket(Color aColor) {
 		/**
 		 * 0x31, X, Y, Z, 0, f0, 0f, J X = r, Y = g, Z = b J is a checksum
 		 */
@@ -49,11 +49,12 @@ public class SuperlegendCommandSender {
 		byte g = (byte) aColor.getGreen();
 		byte b = (byte) aColor.getBlue();
 
-		// FYI: 0x31 + 0xf0 + 0x0f = 48
-		byte c = (byte) (48 + r + g + b); // billig algorithmus fuer checksum
-											// byte
+		byte[] data = new byte[] { 0x31, r, g, b, 0x00, (byte) 0xf0, 0x0f, 0x00 };
 
-		return new byte[] { 0x31, r, g, b, 0x00, (byte) 0xf0, 0x0f, c };
+		byte calculateChecksum = calculateChecksum(data);
+		data[data.length - 1] = calculateChecksum;
+
+		return data;
 	}
 
 	private void sendCommand(String deviceIp, byte[] someBytes) throws UnknownHostException, IOException {
@@ -166,25 +167,38 @@ public class SuperlegendCommandSender {
 			throw new RuntimeException("Unknown state.");
 		}
 
-		// those values are still unknown - however they can be changed by the
-		// app so they probably mean something I still don't know.
-		// assertBytesEquals((byte) 97, bytesReceived[3]);
-		// assertBytesEquals((byte) 33, bytesReceived[4]);
-		// assertBytesEquals((byte) 16, bytesReceived[5]);
+		boolean color;
+		if (97 == bytesReceived[3]) {
+			color = true; // the device is in color only mode.
+		} else {
+			color = false; // the device is in some other function
+		}
+		SuperlegendDeviceState deviceState = new SuperlegendDeviceState(on, color);
+		if (!color) {
+			deviceState.setFrequency(bytesReceived[5]);
+			FUNCTION func = FUNCTION.getFunction(bytesReceived[3]);
+			deviceState.setFunction(func);
+		}
+
+		assertBytesEquals((byte) 33, bytesReceived[4]);
 
 		// next values are int values of r, g, b
 		int r = bytesReceived[6];
 		if (r < 0) { // byte to int
 			r += 256;
 		}
+		deviceState.setRed(r);
 		int g = bytesReceived[7];
 		if (g < 0) { // byte to int
 			g += 256;
 		}
+		deviceState.setGreen(g);
 		int b = bytesReceived[8];
 		if (b < 0) { // byte to int
 			b += 256;
 		}
+		deviceState.setBlue(b);
+		
 		assertBytesEquals((byte) 0, bytesReceived[9]);
 		assertBytesEquals((byte) 4, bytesReceived[10]);
 		assertBytesEquals((byte) 0, bytesReceived[11]);
@@ -194,7 +208,7 @@ public class SuperlegendCommandSender {
 		// check checksum byte
 		assertBytesEquals(calculatedChecksum, bytesReceived[13], "Checksum unsuccessful.");
 
-		return new SuperlegendDeviceState(on, r, g, b);
+		return deviceState;
 	}
 
 	/**
@@ -262,101 +276,74 @@ public class SuperlegendCommandSender {
 
 	/*
 	 * There are some stored procedures: all have the same pattern like:<br>
-	 * 0x61, A, B, 0x0f, C<br>
-	 * Where A is a code for the function.<br>
-	 * B is the frequency a.k.a speed.<br>
-	 * C is the checksum calculated. Following codes are present:
-	 * 0x24 - hold current color<br>
+	 * 0x61, A, B, 0x0f, C<br> Where A is a code for the function.<br> B is the
+	 * frequency a.k.a speed.<br> C is the checksum calculated. Following codes
+	 * are present: 0x24 - hold current color<br>
 	 * 
 	 * 0x25 - Seven color crossfeed: RED,YELLOW,GREEN,CYAN,BLUE,PINK,WHITE<br>
-	 * 0x26 - red blink / gradual change <br>
-	 * 0x27 - green blink  / gradual change <br>
-	 * 0x28 - blue blink  / gradual change<br>
-	 * 0x29 - yellow blink  / gradual change<br>
-	 * 0x30 - flashlight: red, green, blue, magenta, cyan, yellow, white<br>
-	 * 0x31 - flashlight: red<br>
-	 * 0x32 - flashlight: green<br>
-	 * 0x33 - flashlight: blue<br>
-	 * 0x34 - flashlight: yellow<br>
-	 * 0x35 - flashlight: cyan<br>
-	 * 0x36 - flashlight: magenta<br>
-	 * 0x37 - flashlight: white<br>
-	 * 
-	 * 0x38 - Seven color jumping: RED,YELLOW,GREEN,CYAN,BLUE,PINK,WHITE <br>
-	 * 0x39 - flashlight: white<br>
+	 * 0x26 - red blink / gradual change <br> 0x27 - green blink / gradual
+	 * change <br> 0x28 - blue blink / gradual change<br> 0x29 - yellow blink /
+	 * gradual change<br> 0x30 - flashlight: red, green, blue, magenta, cyan,
+	 * yellow, white<br> 0x31 - flashlight: red<br> 0x32 - flashlight: green<br>
+	 * 0x33 - flashlight: blue<br> 0x34 - flashlight: yellow<br> 0x35 -
+	 * flashlight: cyan<br> 0x36 - flashlight: magenta<br> 0x37 - flashlight:
+	 * white<br> 0x38 - Seven color jumping:
+	 * RED,YELLOW,GREEN,CYAN,BLUE,PINK,WHITE <br> 0x39 - flashlight: white<br>
 	 * 0x40 - flashlight: white<br>
 	 */
+	public void function(String deviceIp, FUNCTION func, byte frequency) throws IOException {
+		byte[] data = { 0x61, func.getData(), frequency, (byte) 0x0f, 0 };
+		byte calculateChecksum = calculateChecksum(data);
+		data[data.length - 1] = calculateChecksum;
+
+		sendCommand(deviceIp, data);
+	}
+
+	/**
+	 * Function superlegend devie supports.
+	 * 
+	 * @author Heinz
+	 * 
+	 */
+	enum FUNCTION {
+
+		CROSSFEED(0x25), RED_BLINK(0x26), GREEN_BLINK(0x27), BLUE_BLINK(0x28), YELLOW_BLINK(0x29), FLASHLIGHT_CROSS(
+				0x30), FLASHLIGHT_RED(0x31), FLASHLIGHT_GREEN(0x32), FLASHLIGHT_BLUE(0x33), FLASHLIGHT_YELLOW(0x34), FLASHLIGHT_CYAN(
+				0x35), FLASHLIGHT_MAGENTA(0x36), FLASHLIGHT_WHITE(0x37), JUMPING(0x38), UNKNOWN(0x00);
+
+		/**
+		 * Data for the current value.
+		 */
+		private byte data;
+
+		public byte getData() {
+			return data;
+		}
+
+		private FUNCTION(int d) {
+			data = (byte) d;
+		}
+
+		static FUNCTION getFunction(byte b) {
+			for (FUNCTION f : values()) {
+				if (f.data == b) {
+					return f;
+				}
+			}
+			return UNKNOWN;
+		}
+	}
 
 	public static void main(String[] args) throws IOException {
-		String deviceIp = "192.168.2.109";
-		byte[] data = { 0x61, 0x39, 0x10, (byte) 0x0f, 0 };
-		// { 0x61, 0x26, 0x10, 0x0f, (byte) 0xa6 }; red
-		// {0x61, 0x28, 0x10, 0x0f, (byte) 0xa8}; blue
-		// {0x61, (byte) 0xCF, (byte) 0x01, (byte) 0x01, 0};// { 0x61, 0x26,
-		// 0x10, 0x0f, (byte) 0xa6 };
-		// data = {0x61, 0x28, 0x10, 0x0f, 0xa8};
+		String deviceIp = "192.168.2.100";
 		SuperlegendCommandSender sender = new SuperlegendCommandSender();
-
+		//sender.switchColor(deviceIp, Color.GREEN);
+		sender.function(deviceIp, FUNCTION.FLASHLIGHT_RED, (byte) 0x15);
 		// sender.switchOn(deviceIp);
-		byte calculateChecksum = sender.calculateChecksum(data);
-		data[data.length - 1] = calculateChecksum;
-		sender.sendCommand(deviceIp, data);
 
+		SuperlegendDeviceState information = sender.getInformation(deviceIp);
+		System.out.println(information);
+		// sender.switchColor(deviceIp, Color.RED);
 	}
 
-	public static void main2(String[] args) throws IOException {
-		// I know my device:
-		String deviceIp = "192.168.2.109";
-		SuperlegendCommandSender sender = new SuperlegendCommandSender();
-
-		SuperlegendDeviceState someInformation;
-		Color col = Color.BLUE;
-
-		sender.switchOn(deviceIp);
-
-		// byte[] data = { 0x61, 0x26, 0x10, 0x0f, (byte) 0xa6 };
-
-		byte[] data = { 0x61, (byte) col.getRed(), (byte) col.getGreen(), (byte) col.getBlue(), 0 };
-		byte calculateChecksum = sender.calculateChecksum(data);
-		data[data.length - 1] = calculateChecksum;
-		sender.sendCommand(deviceIp, data);
-
-		try {
-			Thread.sleep(1000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		// someThings(deviceIp, sender);
-	}
-
-	private static void someThings(String deviceIp, SuperlegendCommandSender sender) throws IOException {
-		SuperlegendDeviceState someInformation;
-		Color col;
-		System.out.println("\n##########");
-		System.out.println("on");
-		sender.switchOn(deviceIp);
-		someInformation = sender.getInformation(deviceIp);
-		System.out.println(someInformation);
-
-		System.out.println("\n##########");
-		col = Color.blue;
-		System.out.println("giving color: " + col);
-		sender.switchColor(deviceIp, col);
-		someInformation = sender.getInformation(deviceIp);
-		System.out.println(someInformation);
-
-		System.out.println("\n##########");
-		col = Color.WHITE;
-		System.out.println("giving color: " + col);
-		sender.switchColor(deviceIp, col);
-		someInformation = sender.getInformation(deviceIp);
-		System.out.println(someInformation);
-
-		System.out.println("\n##########");
-		System.out.println("off");
-		sender.switchOff(deviceIp);
-		someInformation = sender.getInformation(deviceIp);
-		System.out.println(someInformation);
-	}
 }

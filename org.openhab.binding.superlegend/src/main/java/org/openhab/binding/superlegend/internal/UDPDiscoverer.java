@@ -84,6 +84,7 @@ public class UDPDiscoverer {
 
 	/**
 	 * Parse the device from the string.
+	 * 
 	 * @param aReceivedData
 	 * @return
 	 */
@@ -93,7 +94,7 @@ public class UDPDiscoverer {
 		}
 
 		String[] split = aReceivedData.split(",");
-		return new SuperlegendDevice(split[0], split[1], split[2]);
+		return new SuperlegendDevice(split[0], split[1].toUpperCase(), split[2]);
 	}
 
 	public SuperlegendDevice[] discoverDevices() throws IOException {

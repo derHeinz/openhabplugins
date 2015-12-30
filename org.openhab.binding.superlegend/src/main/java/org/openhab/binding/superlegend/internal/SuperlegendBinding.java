@@ -153,6 +153,7 @@ public class SuperlegendBinding extends AbstractActiveBinding<SuperlegendBinding
 	private void changeValue(SuperlegendDevice device, Command command) {
 		String deviceIp = device.getIpAddress();
 
+		
 		try {
 			if (command instanceof OnOffType) {
 				if (OnOffType.OFF.equals(command)) {
@@ -195,8 +196,9 @@ public class SuperlegendBinding extends AbstractActiveBinding<SuperlegendBinding
 			return null;
 		}
 		for (SuperlegendDevice device : discoveredDevices) {
+			String mac = aConfig.getMacAddress().toUpperCase();
 			// check if MAC matches
-			if (aConfig.getMacAddress().equals(device.getMacAddress())) {
+			if (mac.equals(device.getMacAddress())) {
 				return device;
 			}
 		}
