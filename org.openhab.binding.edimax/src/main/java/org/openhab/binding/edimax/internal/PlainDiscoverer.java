@@ -12,7 +12,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 /**
- * Simply discovers edimax SP-2101 devices by checking through all devices.
+ * Simply discovers edimax SP-2101 devices by checking through all devices. TODO
+ * does only work if the default password is used on the device.
  * 
  * @author Heinz
  * 
@@ -100,7 +101,7 @@ public class PlainDiscoverer implements Discoverer {
 			if (portScanUsage.result) {
 				String mac;
 				try {
-					mac = HTTPSend.getMAC(portScanUsage.ip).toUpperCase();
+					mac = new HTTPSend().getMAC(portScanUsage.ip).toUpperCase();
 					if (mac != null) {
 						// found a device!
 						EdimaxDevice d = new EdimaxDevice();

@@ -60,7 +60,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				if (deviceIP == null) {
 					logger.error("Device with MAC: " + macAddress + " not found/discovered.");
 					continue;
-				}
+				}		
 
 				// if type is null, default issue STATE
 				EdimaxBindingConfiguration.TYPE type = config.getType();
@@ -72,15 +72,15 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				try {
 					switch (type) {
 					case CURRENT:
-						BigDecimal current = HTTPSend.getCurrent(deviceIP);
+						BigDecimal current = createSender(config).getCurrent(deviceIP);
 						newState = new DecimalType(current);
 						break;
 					case POWER:
-						BigDecimal power = HTTPSend.getPower(deviceIP);
+						BigDecimal power = createSender(config).getPower(deviceIP);
 						newState = new DecimalType(power);
 						break;
 					case STATE:
-						Boolean state = HTTPSend.getState(deviceIP);
+						Boolean state = createSender(config).getState(deviceIP);
 						if (state) {
 							newState = OnOffType.ON;
 						} else {
@@ -96,6 +96,20 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 					eventPublisher.postUpdate(itemName, newState);
 				}
 			}
+		}
+	}
+
+	/**
+	 * Creates sender based on the configured password.
+	 * @param config
+	 * @return
+	 */
+	private HTTPSend createSender(EdimaxBindingConfiguration config) {
+		String password = config.getPassword();
+		if (password == null) {
+			return new HTTPSend();
+		} else {
+			return new HTTPSend(password);
 		}
 	}
 
@@ -185,12 +199,12 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 					logger.debug("Device with MAC: " + macAddress + " not found/discovered.");
 					return;
 				}
-				Boolean currentState = HTTPSend.getState(deviceIP);
+				Boolean currentState = createSender(config).getState(deviceIP);
 				OnOffType targetState = (OnOffType) cmd;
 				if (targetState == OnOffType.ON && !currentState) {
-					HTTPSend.switchState(deviceIP, Boolean.TRUE);
+					createSender(config).switchState(deviceIP, Boolean.TRUE);
 				} else if (targetState == OnOffType.OFF && currentState) {
-					HTTPSend.switchState(deviceIP, Boolean.FALSE);
+					createSender(config).switchState(deviceIP, Boolean.FALSE);
 				}
 
 			} catch (IOException e) {
