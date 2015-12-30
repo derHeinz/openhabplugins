@@ -157,6 +157,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 	}
 
 	private String getDeviceIP(String aMac) {
+		aMac = aMac.toUpperCase();
 		for (EdimaxDevice device : discoveredDevices) {
 			if (aMac.equals(device.getMac())) {
 				return device.getIp();

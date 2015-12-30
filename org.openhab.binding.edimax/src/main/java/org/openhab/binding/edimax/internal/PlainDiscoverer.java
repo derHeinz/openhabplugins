@@ -100,7 +100,7 @@ public class PlainDiscoverer implements Discoverer {
 			if (portScanUsage.result) {
 				String mac;
 				try {
-					mac = HTTPSend.getMAC(portScanUsage.ip);
+					mac = HTTPSend.getMAC(portScanUsage.ip).toUpperCase();
 					if (mac != null) {
 						// found a device!
 						EdimaxDevice d = new EdimaxDevice();

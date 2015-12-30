@@ -8,7 +8,8 @@ Bundle-Version: 1.7.1.qualifier
 Bundle-Activator: org.openhab.binding.edimax.internal.EdimaxActivator
 Bundle-ManifestVersion: 2
 Bundle-Description: This is the Edimax binding
-Import-Package: org.apache.commons.lang,
+Import-Package: org.apache.commons.codec.binary,
+ org.apache.commons.lang,
  org.openhab.core.binding,
  org.openhab.core.events,
  org.openhab.core.items,

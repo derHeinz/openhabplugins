@@ -10,41 +10,41 @@ import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang.StringUtils;
 
 /**
  * Discovers EDIMAX devices by using the build-in UDP discovery. One sends a UDP
- * packete with code 1300 and the device responds with code 1400 if it is there.
+ * packet to port 20560. Edimax device respondes.
  * 
  * @author Heinz
  * 
  */
 public class UDPDiscoverer implements Discoverer {
 
-	private static final String part1 = "<param><code value=\"1300\" /><port value=\"";
-	private static final String part2 = "\" /></param>";
-
-	private static final String answer_start = "<param><code value=\"1400\"";
-
 	/**
-	 * Static port, as no other port seems to work with my device.
+	 * Discovery Package.
 	 */
-	private static final int PORT = 50474;
+	byte[] DISCOVERY_BYTES = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x45,
+			0x44, 0x49, 0x4d, 0x41, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xa1, (byte) 0xff, 0x5e };
 
-	private List<String> discover() throws SocketException, UnknownHostException, IOException {
-		List<String> discoveredDevices = new ArrayList<>();
+	private EdimaxDevice[] discover() throws SocketException, UnknownHostException, IOException {
+		List<EdimaxDevice> discoveredDevices = new ArrayList<>();
 		DatagramSocket serverSocket = null;
 		try {
-			serverSocket = new DatagramSocket(PORT);
+			serverSocket = new DatagramSocket(12346); // choose random port,
+														// because with empty
+														// port sometimes error
+														// occures.
 
 			// send UDP broadcast
 			InetAddress ipAddress = InetAddress.getByName("255.255.255.255");
-			byte[] sendData = (part1 + PORT + part2).getBytes();
-			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, PORT);
+			byte[] sendData = DISCOVERY_BYTES;
+			DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, ipAddress, 20560);
 			serverSocket.send(sendPacket);
 
 			// receive
-			serverSocket.setSoTimeout(1000);
+			serverSocket.setSoTimeout(1000 * 5);
 			byte[] receiveData = new byte[1024];
 
 			try {
@@ -54,9 +54,18 @@ public class UDPDiscoverer implements Discoverer {
 					serverSocket.receive(receivePacket);
 					String sentence = new String(receivePacket.getData());
 
-					if (!StringUtils.isEmpty(sentence) && sentence.startsWith(answer_start)) {
+					if (!StringUtils.isEmpty(sentence) && sentence.contains("EDIMAX")) {
+						byte[] mac = new byte[6];
+						System.arraycopy(receivePacket.getData(), 0, mac, 0, 6);
+						
+						String encodedMAC = Hex.encodeHexString(mac).toUpperCase();
 						InetAddress discoveredIp = receivePacket.getAddress();
-						discoveredDevices.add(discoveredIp.getHostAddress());
+						
+						EdimaxDevice dev = new EdimaxDevice();
+						dev.setIp(discoveredIp.getHostAddress());
+						dev.setMac(encodedMAC);
+						
+						discoveredDevices.add(dev);
 					}
 
 				}
@@ -68,27 +77,16 @@ public class UDPDiscoverer implements Discoverer {
 				serverSocket.close();
 			}
 		}
-		return discoveredDevices;
+		return discoveredDevices.toArray(new EdimaxDevice[discoveredDevices.size()]);
 	}
 
 	@Override
 	public EdimaxDevice[] discoverDevices() throws DiscoveryException {
-		List<EdimaxDevice> result = new ArrayList<>();
-		List<String> discoveredIPs;
 		try {
-			discoveredIPs = discover();
-			for (String ip : discoveredIPs) {
-				String mac = HTTPSend.getMAC(ip);
-				EdimaxDevice dev = new EdimaxDevice();
-				dev.setIp(ip);
-				dev.setMac(mac);
-				result.add(dev);
-			}
-
+			return discover();
 		} catch (IOException e) {
 			throw new DiscoveryException(e);
 		}
-		return result.toArray(new EdimaxDevice[result.size()]);
 	}
 
 	public static void main(String[] args) throws DiscoveryException {
@@ -96,7 +94,6 @@ public class UDPDiscoverer implements Discoverer {
 		for (EdimaxDevice dev : udpDiscoverer.discoverDevices()) {
 			System.out.println("IP: " + dev.getIp() + ", mac:" + dev.getMac());
 		}
-
 	}
 
 }
