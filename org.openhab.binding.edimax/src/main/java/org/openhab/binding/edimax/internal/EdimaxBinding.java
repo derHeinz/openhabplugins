@@ -60,7 +60,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				if (deviceIP == null) {
 					logger.error("Device with MAC: " + macAddress + " not found/discovered.");
 					continue;
-				}		
+				}
 
 				// if type is null, default issue STATE
 				EdimaxBindingConfiguration.TYPE type = config.getType();
@@ -101,6 +101,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 
 	/**
 	 * Creates sender based on the configured password.
+	 * 
 	 * @param config
 	 * @return
 	 */
@@ -184,21 +185,19 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 	protected void internalReceiveCommand(String itemName, Command command) {
 		for (EdimaxBindingProvider provider : providers) {
 			EdimaxBindingConfiguration config = ((EdimaxGenericBindingProvider) provider).getConfig(itemName);
-			changeValue(config, command);
+			String deviceIP = getDeviceIP(config.getMacAddress());
+			if (deviceIP == null) {
+				logger.debug("No real device for item: " + itemName + " found.");
+				continue;
+			}
+			changeValue(itemName, deviceIP, config, command);
 			break;
 		}
 	}
 
-	private void changeValue(EdimaxBindingConfiguration config, Command cmd) {
+	private void changeValue(String itemName, String deviceIP, EdimaxBindingConfiguration config, Command cmd) {
 		if (cmd instanceof OnOffType) {
-			String macAddress = config.getMacAddress();
 			try {
-
-				String deviceIP = getDeviceIP(macAddress);
-				if (deviceIP == null) {
-					logger.debug("Device with MAC: " + macAddress + " not found/discovered.");
-					return;
-				}
 				Boolean currentState = createSender(config).getState(deviceIP);
 				OnOffType targetState = (OnOffType) cmd;
 				if (targetState == OnOffType.ON && !currentState) {
@@ -208,8 +207,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				}
 
 			} catch (IOException e) {
-				logger.error("Error in communication with device. Device's MAC: " + macAddress
-						+ ". Cannot set update to device.", e);
+				logger.error("Error in communication with device: " + itemName + ". Cannot set update to device.", e);
 			}
 
 		} else {
@@ -252,8 +250,9 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				}
 			}
 		}
-		
-		// if nothing is configured / or the configuration went wrong use the UDP discovery.
+
+		// if nothing is configured / or the configuration went wrong use the
+		// UDP discovery.
 		if (discoverer == null) {
 			discoverer = new UDPDiscoverer();
 		}
