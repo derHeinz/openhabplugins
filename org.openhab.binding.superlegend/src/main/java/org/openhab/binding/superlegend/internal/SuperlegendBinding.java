@@ -84,7 +84,7 @@ public class SuperlegendBinding extends AbstractActiveBinding<SuperlegendBinding
 						.getConfig(itemName);
 				SuperlegendDevice device = findRealDevice(config);
 				if (device == null) {
-					logger.info("No real device for " + itemName + " found.");
+					notFoundLogMessage(itemName);
 					continue;
 				}
 
@@ -143,11 +143,15 @@ public class SuperlegendBinding extends AbstractActiveBinding<SuperlegendBinding
 			SuperlegendBindingConfiguration config = ((SuperlegendGenericBindingProvider) provider).getConfig(itemName);
 			SuperlegendDevice device = findRealDevice(config);
 			if (device == null) {
-				logger.info("No real device for " + itemName + " found.");
+				notFoundLogMessage(itemName);
 				continue;
 			}
 			changeValue(device, command);
 		}
+	}
+
+	protected void notFoundLogMessage(String itemName) {
+		logger.debug("No real device for item: " + itemName + " found.");
 	}
 
 	private void changeValue(SuperlegendDevice device, Command command) {
