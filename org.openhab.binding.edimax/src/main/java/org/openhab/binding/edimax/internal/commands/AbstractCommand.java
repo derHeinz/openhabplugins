@@ -1,9 +1,17 @@
+/**
+ * Copyright (c) 2010-2015, openHAB.org and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.openhab.binding.edimax.internal.commands;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -25,6 +33,13 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
+/**
+ * Base class for commands..
+ * 
+ * @author Heinz
+ *
+ * @param <T>
+ */
 public abstract class AbstractCommand<T extends Object> {
 
 	/**
@@ -98,6 +113,12 @@ public abstract class AbstractCommand<T extends Object> {
 	 */
 	private SimpleDateFormat format = new SimpleDateFormat("yyyyMMddkkmmss");
 
+	/**
+	 * Extract return types from response.
+	 * 
+	 * @param result
+	 * @return
+	 */
 	protected T unmarshal(String result) {
 
 		Type tType = extractType();
@@ -127,28 +148,51 @@ public abstract class AbstractCommand<T extends Object> {
 
 		throw new RuntimeException("Type unknown " + tType);
 	}
-
-	protected Type extractType() {
-		Type mySuperclass = this.getClass().getGenericSuperclass();
-		Type[] arr = ((ParameterizedType) mySuperclass).getActualTypeArguments();
-		Type tType = arr[0];
-		return tType;
-	}
-
-	protected T setValue;
-
+	
+	/**
+	 * This command to XML.
+	 * @param value
+	 * @return
+	 */
 	protected String marshal(T value) {
 		return value.toString();
 	}
 
+	/**
+	 * Find type.
+	 */
+	protected Type extractType() {
+		Type mySuperclass = this.getClass().getGenericSuperclass();
+		Type[] arr = ((ParameterizedType) mySuperclass)
+				.getActualTypeArguments();
+		Type tType = arr[0];
+		return tType;
+	}
+
+	/**
+	 * The value to be set when it's a set command.
+	 */
+	protected T setValue;
+
+	/**
+	 * Return the extracted return type.
+	 * @param aResponse
+	 * @return
+	 */
 	protected T getResultValue(String aResponse) {
 		try {
 			String result = extractValueFromXML(aResponse, getXPathString());
 			return unmarshal(result);
-		} catch (XPathExpressionException | ParserConfigurationException | SAXException | IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+		} catch (XPathExpressionException ex) {
+			ex.printStackTrace();
+		} catch (ParserConfigurationException ex) {
+			ex.printStackTrace();
+		} catch (SAXException ex) {
+			ex.printStackTrace();
+		} catch (IOException ex) {
+			ex.printStackTrace();
 		}
+
 		return null;
 	}
 
@@ -161,14 +205,26 @@ public abstract class AbstractCommand<T extends Object> {
 		return (setValue != null);
 	}
 
+	/**
+	 * Do the command.
+	 * @param ci
+	 * @return
+	 * @throws IOException
+	 */
 	public T executeCommand(ConnectionInformation ci) throws IOException {
 		String lastPart = "smartplug.cgi";
-		String response = HTTPSend.executePost(ci.getUrl(), ci.getPort(), lastPart, getCommandString(),
-				ci.getUsername(), ci.getPassword());
+		String response = HTTPSend.executePost(ci.getUrl(), ci.getPort(),
+				lastPart, getCommandString(), ci.getUsername(),
+				ci.getPassword());
 
 		return getResultValue(response);
 	}
 
+	/**
+	 * Create initial XML tag. 
+	 * @param aName
+	 * @return
+	 */
 	protected String createStartTag(String aName) {
 		StringBuffer res = new StringBuffer();
 		res.append("<");
@@ -187,10 +243,20 @@ public abstract class AbstractCommand<T extends Object> {
 		return res.toString();
 	}
 
+	/**
+	 * Create end tag.
+	 * @param aName
+	 * @return
+	 */
 	protected String createEndTag(String aName) {
 		return "</" + aName + ">";
 	}
 
+	/**
+	 * Create leaf node.
+	 * @param aName
+	 * @return
+	 */
 	protected String createLeafTag(String aName) {
 		if (isSet()) {
 			StringBuffer sb = new StringBuffer();
@@ -204,20 +270,37 @@ public abstract class AbstractCommand<T extends Object> {
 	}
 
 	/**
-	 * HELPER
+	 * HELPER.
 	 */
 	public static final String XML_HEADER = "<?xml version=\"1.0\" encoding=\"UTF8\"?>\r\n";
 
-	protected static final DocumentBuilderFactory domFactory = DocumentBuilderFactory.newInstance();
+	/**
+	 * XML Helper.
+	 */
+	protected static final DocumentBuilderFactory domFactory = DocumentBuilderFactory
+			.newInstance();
 
-	protected String extractValueFromXML(String document, String xpathExpression) throws ParserConfigurationException,
-			SAXException, IOException, XPathExpressionException {
+	/**
+	 * Extract the innermost information of the response as string.
+	 * @param document
+	 * @param xpathExpression
+	 * @return
+	 * @throws ParserConfigurationException
+	 * @throws SAXException
+	 * @throws IOException
+	 * @throws XPathExpressionException
+	 */
+	protected String extractValueFromXML(String document, String xpathExpression)
+			throws ParserConfigurationException, SAXException, IOException,
+			XPathExpressionException {
 		DocumentBuilder builder = domFactory.newDocumentBuilder();
-		ByteArrayInputStream tempIS = new ByteArrayInputStream(document.getBytes());
+		ByteArrayInputStream tempIS = new ByteArrayInputStream(
+				document.getBytes());
 		Document dDoc = builder.parse(tempIS);
 
 		XPath xPath = XPathFactory.newInstance().newXPath();
-		Node node = (Node) xPath.evaluate(xpathExpression, dDoc, XPathConstants.NODE);
+		Node node = (Node) xPath.evaluate(xpathExpression, dDoc,
+				XPathConstants.NODE);
 		return node.getNodeValue();
 	}
 

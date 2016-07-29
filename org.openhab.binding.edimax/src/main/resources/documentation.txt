@@ -1,33 +1,11 @@
-First configure following in openhab.cfg
-
-1. This binding features some discoverers.
-
-1.1. The UDPDiscoverer sends UDP broadcast messages which Edimax will respond to. This discoverer is used by default.
-
-1.2. If for some reasons you cannot use the UDPDiscoverer there is another discovery method that scans an IP segment for the devices.
-In order to use this discoverer you therefore use the 'ipprefix' to configure the first part of the net.
-Next you specify 'ipStartSegment' and 'ipEndSegment' both as numbers. These 3 configurations make
-up an IP range in which the discovery checks for devices. Be aware that this only works for devices with the default password.
-
-Example section of openhab.cfg:
-################################ Edimax Binding #######################################
-#
-# Edimax binding
-edimax:ipprefix=192.168.2.
-edimax:ipStartSegment=100
-edimax:ipEndSegment=120
-
-
-2. Next you configure your device itself.
-Simple version is to just configure the mac adress. The item is considered to be a switch, which
-than is ON or OFF.
-Example: Switch EdimaxSimple  {edimax="01234567ABCD"}
+How to configure your device itself.
+Simple version is to just configure the mac adress. The item is considered to be a switch, which than is ON or OFF.
+Following example creates a binding to edmiax for device with MAC: 01234567ABCD.
+Example: Switch EdimaxSimple {edimax="01234567ABCD"}
 
 Also the Password to the device is configurable. The following example creates a device with password '1234'.
 Example: {edimax="01234567ABCD:1234"}
 
-There is also the option to configure the type, available types are STATE,POWER and CURRENT.
-Where STATE is the default behaviour, POWER for example assumes a number item and will assign
-the power consumption to this item.
+There is also the option to configure the type, currently available types are STATE,POWER and CURRENT.
+STATE is the default. POWER for example assumes a number item and will show the power consumption of the device.
 Example: Number EdimaxCurrent  {edimax="01234567ABCD:1234:CURRENT"}
-Number EdimaxCurrent  {edimax="01234567ABCD:1234:CURRENT"}

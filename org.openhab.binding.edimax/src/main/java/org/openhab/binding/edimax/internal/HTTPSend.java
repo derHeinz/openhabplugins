@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2010-2015, openHAB.org and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.openhab.binding.edimax.internal;
 
 import java.io.BufferedReader;
@@ -8,22 +16,24 @@ import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Map;
-import java.util.Map.Entry;
 
 import javax.xml.bind.DatatypeConverter;
 
-import org.openhab.binding.edimax.internal.commands.AbstractCommand;
 import org.openhab.binding.edimax.internal.commands.GetCurrent;
-import org.openhab.binding.edimax.internal.commands.GetInternet;
-import org.openhab.binding.edimax.internal.commands.GetNowPowerCommandCompound;
+import org.openhab.binding.edimax.internal.commands.GetMAC;
 import org.openhab.binding.edimax.internal.commands.GetPower;
 import org.openhab.binding.edimax.internal.commands.GetState;
-import org.openhab.binding.edimax.internal.commands.GetMAC;
 import org.openhab.binding.edimax.internal.commands.SetState;
 
+/**
+ * Sends commands and returns responses for the edimax device, using it's http
+ * interface.
+ * 
+ * @author Heinz
+ *
+ */
 public class HTTPSend {
-	
+
 	public static final String XML_HEADER = "<?xml version=\"1.0\" encoding=\"UTF8\"?>\r\n";
 
 	private static final String defaultUser = "admin";
@@ -34,13 +44,13 @@ public class HTTPSend {
 	private static String completeURL(String anIp) {
 		return "http://" + anIp;
 	}
-	
+
 	private String password;
-	
+
 	public HTTPSend() {
 		this(defaultPassword);
 	}
-	
+
 	public HTTPSend(String aPw) {
 		password = aPw;
 	}
@@ -53,9 +63,11 @@ public class HTTPSend {
 	 * @return
 	 * @throws IOException
 	 */
-	public Boolean switchState(String anIp, Boolean newState) throws IOException {
+	public Boolean switchState(String anIp, Boolean newState)
+			throws IOException {
 		String completeUrl = completeURL(anIp);
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, password, completeUrl, PORT);
+		ConnectionInformation ci = new ConnectionInformation(defaultUser,
+				password, completeUrl, PORT);
 
 		SetState setS = new SetState(newState);
 		return setS.executeCommand(ci);
@@ -70,7 +82,8 @@ public class HTTPSend {
 	 */
 	public Boolean getState(String anIp) throws IOException {
 		String completeUrl = completeURL(anIp);
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, password, completeUrl, PORT);
+		ConnectionInformation ci = new ConnectionInformation(defaultUser,
+				password, completeUrl, PORT);
 
 		GetState getS = new GetState();
 		return getS.executeCommand(ci);
@@ -85,7 +98,8 @@ public class HTTPSend {
 	 */
 	public String getMAC(String anIp) throws IOException {
 		String completeUrl = completeURL(anIp);
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, password, completeUrl, PORT);
+		ConnectionInformation ci = new ConnectionInformation(defaultUser,
+				password, completeUrl, PORT);
 
 		GetMAC getC = new GetMAC();
 		return getC.executeCommand(ci);
@@ -100,7 +114,8 @@ public class HTTPSend {
 	 */
 	public BigDecimal getCurrent(String anIp) throws IOException {
 		String completeUrl = completeURL(anIp);
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, password, completeUrl, PORT);
+		ConnectionInformation ci = new ConnectionInformation(defaultUser,
+				password, completeUrl, PORT);
 
 		GetCurrent getC = new GetCurrent();
 		return getC.executeCommand(ci);
@@ -118,14 +133,16 @@ public class HTTPSend {
 	 */
 	public BigDecimal getPower(String anIp) throws IOException {
 		String completeUrl = completeURL(anIp);
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, password, completeUrl, PORT);
+		ConnectionInformation ci = new ConnectionInformation(defaultUser,
+				password, completeUrl, PORT);
 
 		GetPower getC = new GetPower();
 		return getC.executeCommand(ci);
 	}
 
-	public static String executePost(String targetURL, int targetPort, String targetURlPost, String urlParameters,
-			String username, String password) throws IOException {
+	public static String executePost(String targetURL, int targetPort,
+			String targetURlPost, String urlParameters, String username,
+			String password) throws IOException {
 		String complete = targetURL + ":" + targetPort + "/" + targetURlPost;
 
 		HttpURLConnection connection = null;
@@ -136,26 +153,29 @@ public class HTTPSend {
 			connection.setRequestMethod("POST");
 
 			connection.setRequestProperty("Connection", "Keep-Alive");
-			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-			connection.setRequestProperty("Content-Length", Integer.toString(urlParameters.getBytes().length));
+			connection.setRequestProperty("Content-Type",
+					"application/x-www-form-urlencoded");
+			connection.setRequestProperty("Content-Length",
+					Integer.toString(urlParameters.getBytes().length));
 
 			String userpass = username + ":" + password;
-			String basicAuth = "Basic " + DatatypeConverter.printBase64Binary(userpass.getBytes());
+			String basicAuth = "Basic "
+					+ DatatypeConverter.printBase64Binary(userpass.getBytes());
 			connection.setRequestProperty("Authorization", basicAuth);
 
 			connection.setUseCaches(false);
 			connection.setDoOutput(true);
 
 			// Send request
-			DataOutputStream wr = new DataOutputStream(connection.getOutputStream());
+			DataOutputStream wr = new DataOutputStream(
+					connection.getOutputStream());
 			wr.write(urlParameters.getBytes());
 			wr.close();
 
 			// Get Response
 			InputStream is = connection.getInputStream();
 			BufferedReader rd = new BufferedReader(new InputStreamReader(is));
-			StringBuilder response = new StringBuilder(); // or StringBuffer if
-															// not Java 5+
+			StringBuilder response = new StringBuilder();
 			String line;
 			while ((line = rd.readLine()) != null) {
 				response.append(line);
@@ -167,31 +187,6 @@ public class HTTPSend {
 			if (connection != null) {
 				connection.disconnect();
 			}
-		}
-	}
-	
-	public static void main(String[] args) throws IOException {
-		String url = "http://192.168.2.105";
-
-		ConnectionInformation ci = new ConnectionInformation(defaultUser, defaultPassword, url, PORT);
-
-		GetNowPowerCommandCompound comp = new GetNowPowerCommandCompound();
-		// comp.addCommand(new GetPower());
-		// comp.addCommand(new GetCurrent());
-		// comp.addCommand(new GetEnergyDay());
-
-		AbstractCommand cmd = new GetInternet();
-		Object executeCommand = cmd.executeCommand(ci);
-
-		if (executeCommand instanceof Map) {
-			Map m = (Map) executeCommand;
-			for (Object e : m.entrySet()) {
-				Object key = ((Entry) e).getKey();
-				Object val = ((Entry) e).getValue();
-				System.out.println(key + " " + val);
-			}
-		} else {
-			System.out.println(executeCommand);
 		}
 	}
 

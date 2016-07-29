@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2010-2015, openHAB.org and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.openhab.binding.edimax.internal;
 
 import java.io.IOException;
@@ -15,21 +23,21 @@ import org.apache.commons.lang.StringUtils;
 
 /**
  * Discovers EDIMAX devices by using the build-in UDP discovery. One sends a UDP
- * packet to port 20560. Edimax device respondes.
- * 
+ * packet to port 20560 and Edimax device responds.
+ *
  * @author Heinz
- * 
+ *
  */
 public class UDPDiscoverer implements Discoverer {
 
 	/**
 	 * Discovery Package.
 	 */
-	byte[] DISCOVERY_BYTES = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x45,
-			0x44, 0x49, 0x4d, 0x41, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xa1, (byte) 0xff, 0x5e };
+	byte[] DISCOVERY_BYTES = { (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, (byte) 0xff, 0x45, 0x44,
+			0x49, 0x4d, 0x41, 0x58, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, (byte) 0xa1, (byte) 0xff, 0x5e };
 
 	private EdimaxDevice[] discover() throws SocketException, UnknownHostException, IOException {
-		List<EdimaxDevice> discoveredDevices = new ArrayList<>();
+		List<EdimaxDevice> discoveredDevices = new ArrayList<EdimaxDevice>();
 		DatagramSocket serverSocket = null;
 		try {
 			serverSocket = new DatagramSocket(12346); // choose random port,
@@ -57,14 +65,14 @@ public class UDPDiscoverer implements Discoverer {
 					if (!StringUtils.isEmpty(sentence) && sentence.contains("EDIMAX")) {
 						byte[] mac = new byte[6];
 						System.arraycopy(receivePacket.getData(), 0, mac, 0, 6);
-						
+
 						String encodedMAC = Hex.encodeHexString(mac).toUpperCase();
 						InetAddress discoveredIp = receivePacket.getAddress();
-						
+
 						EdimaxDevice dev = new EdimaxDevice();
 						dev.setIp(discoveredIp.getHostAddress());
 						dev.setMac(encodedMAC);
-						
+
 						discoveredDevices.add(dev);
 					}
 

@@ -1,31 +1,41 @@
+/**
+ * Copyright (c) 2010-2015, openHAB.org and others.
+ *
+ * All rights reserved. This program and the accompanying materials
+ * are made available under the terms of the Eclipse Public License v1.0
+ * which accompanies this distribution, and is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ */
 package org.openhab.binding.edimax.internal;
 
 import java.io.IOException;
 import java.math.BigDecimal;
-import java.util.Dictionary;
+import java.util.Map;
 
-import org.apache.commons.lang.StringUtils;
 import org.openhab.binding.edimax.EdimaxBindingProvider;
-import org.openhab.binding.edimax.internal.EdimaxBindingConfiguration.TYPE;
+import org.openhab.binding.edimax.internal.EdimaxBindingConfiguration.Type;
 import org.openhab.core.binding.AbstractActiveBinding;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.State;
-import org.osgi.service.cm.ConfigurationException;
-import org.osgi.service.cm.ManagedService;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> implements ManagedService {
+/**
+ * Binding main class.
+ * 
+ * @author Heinz
+ *
+ */
+public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> {
 
-	private static final String CONFIG_KEY_IP_END_SEGMENT = "ipEndSegment";
-
-	private static final String CONFIG_KEY_IP_START_SEGMENT = "ipStartSegment";
-
-	private static final String CONFIG_KEY_IP_PREFIX = "ipPrefix";
-
-	private static final Logger logger = LoggerFactory.getLogger(EdimaxBinding.class);
+	/**
+	 * Logger.
+	 */
+	private static final Logger logger = LoggerFactory
+			.getLogger(EdimaxBinding.class);
 
 	/**
 	 * Real devices discovered.
@@ -34,7 +44,8 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 
 	/**
 	 * How many exception occur until it is considered to be a real error.
-	 * Should be used in conjunction with {@link #getRefreshInterval()}.
+	 * Should be used in conjunction with {@link #getRefreshInterval()}. May
+	 * also be configurable by managed service.
 	 */
 	private static final int EXCEPTION_COUNT_TO_REAL_ERROR = 4;
 
@@ -51,32 +62,36 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 			discover();
 		}
 
-		// check device's state -> post
+		// check device's state -> post if it changed.
 		for (EdimaxBindingProvider provider : providers) {
 			for (String itemName : provider.getItemNames()) {
-				EdimaxBindingConfiguration config = ((EdimaxGenericBindingProvider) provider).getConfig(itemName);
+				EdimaxBindingConfiguration config = ((EdimaxGenericBindingProvider) provider)
+						.getConfig(itemName);
 				String macAddress = config.getMacAddress();
 				String deviceIP = getDeviceIP(macAddress);
 				if (deviceIP == null) {
-					logger.error("Device with MAC: " + macAddress + " not found/discovered.");
+					logger.error("Device with MAC: " + macAddress
+							+ " not found/discovered.");
 					continue;
 				}
 
-				// if type is null, default issue STATE
-				EdimaxBindingConfiguration.TYPE type = config.getType();
+				// if type is null, default type is STATE
+				EdimaxBindingConfiguration.Type type = config.getType();
 				if (type == null) {
-					type = TYPE.STATE;
+					type = Type.STATE;
 				}
 
 				State newState = null;
 				try {
 					switch (type) {
 					case CURRENT:
-						BigDecimal current = createSender(config).getCurrent(deviceIP);
+						BigDecimal current = createSender(config).getCurrent(
+								deviceIP);
 						newState = new DecimalType(current);
 						break;
 					case POWER:
-						BigDecimal power = createSender(config).getPower(deviceIP);
+						BigDecimal power = createSender(config).getPower(
+								deviceIP);
 						newState = new DecimalType(power);
 						break;
 					case STATE:
@@ -89,8 +104,10 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 						break;
 					}
 				} catch (IOException e) {
-					logger.error("Error in communication with device. Device's MAC: " + macAddress
-							+ ". Cannot get update from device.", e);
+					logger.error(
+							"Error in communication with device. Device's MAC: "
+									+ macAddress
+									+ ". Cannot get update from device.", e);
 				}
 				if (newState != null) {
 					eventPublisher.postUpdate(itemName, newState);
@@ -117,7 +134,7 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 	/**
 	 * Discovery tool.
 	 */
-	private Discoverer discoverer;
+	private Discoverer discoverer = new UDPDiscoverer();
 
 	/**
 	 * Discovery.
@@ -137,7 +154,8 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				// real error occured - set current devices to those
 				discoveredDevices = discovered;
 				logger.error(
-						"Error discovering Edimax devices. Amount of exceptions: " + EXCEPTION_COUNT_TO_REAL_ERROR, e1);
+						"Error discovering Edimax devices. Amount of exceptions: "
+								+ EXCEPTION_COUNT_TO_REAL_ERROR, e1);
 			} else {
 				logger.debug("Interim error discovering Edimax devices.", e1);
 			}
@@ -184,7 +202,8 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 	@Override
 	protected void internalReceiveCommand(String itemName, Command command) {
 		for (EdimaxBindingProvider provider : providers) {
-			EdimaxBindingConfiguration config = ((EdimaxGenericBindingProvider) provider).getConfig(itemName);
+			EdimaxBindingConfiguration config = ((EdimaxGenericBindingProvider) provider)
+					.getConfig(itemName);
 			String deviceIP = getDeviceIP(config.getMacAddress());
 			if (deviceIP == null) {
 				logger.debug("No real device for item: " + itemName + " found.");
@@ -195,7 +214,8 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 		}
 	}
 
-	private void changeValue(String itemName, String deviceIP, EdimaxBindingConfiguration config, Command cmd) {
+	private void changeValue(String itemName, String deviceIP,
+			EdimaxBindingConfiguration config, Command cmd) {
 		if (cmd instanceof OnOffType) {
 			try {
 				Boolean currentState = createSender(config).getState(deviceIP);
@@ -207,12 +227,24 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 				}
 
 			} catch (IOException e) {
-				logger.error("Error in communication with device: " + itemName + ". Cannot set update to device.", e);
+				logger.error("Error in communication with device: " + itemName
+						+ ". Cannot set update to device.", e);
 			}
 
 		} else {
 			logger.error("Unsupported command: " + cmd);
 		}
+	}
+
+	/**
+	 * Called by SCR to activate component.
+	 * 
+	 * @param bundleContext
+	 * @param configuration
+	 */
+	public void activate(final BundleContext bundleContext,
+			final Map<String, Object> configuration) {
+		setProperlyConfigured(true);
 	}
 
 	@Override
@@ -224,41 +256,6 @@ public class EdimaxBinding extends AbstractActiveBinding<EdimaxBindingProvider> 
 	@Override
 	protected String getName() {
 		return "Edimax update/discovery";
-	}
-
-	@Override
-	public void updated(Dictionary<String, ?> config) throws ConfigurationException {
-
-		if (config != null) {
-
-			// check whether the 'scan all' discoverer is configured
-			String configIpPrefix = (String) config.get(CONFIG_KEY_IP_PREFIX);
-			String configIpStartSegment = (String) config.get(CONFIG_KEY_IP_START_SEGMENT);
-			String configIpEndSegment = (String) config.get(CONFIG_KEY_IP_END_SEGMENT);
-
-			if (!StringUtils.isEmpty(configIpPrefix) && !StringUtils.isEmpty(configIpStartSegment)
-					&& !StringUtils.isEmpty(configIpEndSegment)) {
-				int startIpSegment;
-				int endIpSegment;
-				try {
-					startIpSegment = Integer.valueOf(configIpStartSegment);
-					endIpSegment = Integer.valueOf(configIpEndSegment);
-					// init discoverer with configured values
-					discoverer = new PlainDiscoverer(configIpPrefix, startIpSegment, endIpSegment);
-				} catch (NumberFormatException e) {
-					logger.error("Unable to parse. Using default discovery method.", e);
-				}
-			}
-		}
-
-		// if nothing is configured / or the configuration went wrong use the
-		// UDP discovery.
-		if (discoverer == null) {
-			discoverer = new UDPDiscoverer();
-		}
-
-		// start the binding.
-		setProperlyConfigured(true);
 	}
 
 }
